@@ -8,42 +8,41 @@ A demonstration of Agent-to-Agent (A2A) communication between different AI agent
 
 ### Prerequisites
 
-- Node.js 18+
-- Python 3.10+
 - [Google API Key](https://aistudio.google.com/app/apikey)
 - [OpenAI API Key](https://platform.openai.com/api-keys)
 
-### Setup
-
-1. Install frontend dependencies:
+### Option 1: Docker (Recommended)
 
 ```bash
-npm install
+cp .env.example .env
+# Edit .env and add your API keys
+docker-compose up --build
 ```
 
-2. Install Python dependencies:
+### Option 2: Local Development
+
+Requires Node.js 18+ and Python 3.10+.
 
 ```bash
+# Frontend
+npm install
+
+# Python agents
 cd agents
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-```
+cd ..
 
-3. Configure environment variables:
-
-```bash
+# Configure and run
 cp .env.example .env
-# Edit .env and add your GOOGLE_API_KEY and OPENAI_API_KEY
-```
-
-4. Start all services:
-
-```bash
+# Edit .env and add your API keys
 npm run dev
 ```
 
-This starts:
+### Services
+
+Once running, the following services are available:
 
 - UI on `http://localhost:3000`
 - Orchestrator on `http://localhost:9000`

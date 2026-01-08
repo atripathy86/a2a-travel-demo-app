@@ -1,0 +1,145 @@
+# A2A Travel Demo App - Docker Compose
+# 
+# Usage:
+#   1. Copy .env.example to .env and add your API keys
+#   2. docker-compose up --build
+#   3. Access the UI at http://localhost:3000
+
+services:
+  # ============================================
+  # Frontend (Next.js)
+  # ============================================
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - ORCHESTRATOR_URL=http://orchestrator:9000
+      - ITINERARY_AGENT_URL=http://itinerary:9001
+      - BUDGET_AGENT_URL=http://budget:9002
+      - RESTAURANT_AGENT_URL=http://restaurant:9003
+      - WEATHER_AGENT_URL=http://weather:9005
+    depends_on:
+      - orchestrator
+      - itinerary
+      - budget
+      - restaurant
+      - weather
+    networks:
+      - a2a-network
+
+  # ============================================
+  # Orchestrator Agent (ADK + Gemini)
+  # ============================================
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.agents
+    command: python orchestrator.py
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - ORCHESTRATOR_PORT=9000
+      - ITINERARY_AGENT_URL=http://itinerary:9001
+      - BUDGET_AGENT_URL=http://budget:9002
+      - RESTAURANT_AGENT_URL=http://restaurant:9003
+      - WEATHER_AGENT_URL=http://weather:9005
+    ports:
+      - "9000:9000"
+    networks:
+      - a2a-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/.well-known/agent.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Itinerary Agent (LangGraph + OpenAI)
+  # ============================================
+  itinerary:
+    build:
+      context: .
+      dockerfile: Dockerfile.agents
+    command: python itinerary_agent.py
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ITINERARY_PORT=9001
+    ports:
+      - "9001:9001"
+    networks:
+      - a2a-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/.well-known/agent.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Budget Agent (ADK + Gemini)
+  # ============================================
+  budget:
+    build:
+      context: .
+      dockerfile: Dockerfile.agents
+    command: python budget_agent.py
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - BUDGET_PORT=9002
+    ports:
+      - "9002:9002"
+    networks:
+      - a2a-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9002/.well-known/agent.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Restaurant Agent (ADK + Gemini)
+  # ============================================
+  restaurant:
+    build:
+      context: .
+      dockerfile: Dockerfile.agents
+    command: python restaurant_agent.py
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - RESTAURANT_PORT=9003
+    ports:
+      - "9003:9003"
+    networks:
+      - a2a-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9003/.well-known/agent.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Weather Agent (ADK + Gemini)
+  # ============================================
+  weather:
+    build:
+      context: .
+      dockerfile: Dockerfile.agents
+    command: python weather_agent.py
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - WEATHER_PORT=9005
+    ports:
+      - "9005:9005"
+    networks:
+      - a2a-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9005/.well-known/agent.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  a2a-network:
+    driver: bridge

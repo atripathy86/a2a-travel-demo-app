@@ -5,11 +5,11 @@
   "scripts": {
     "dev": "concurrently --names \"UI,Orch,Itin,Weather,Rest,Budget\" --prefix-colors \"cyan,gray,green,blue,blue,blue\" \"npm run dev:ui\" \"npm run dev:orchestrator\" \"npm run dev:itinerary\" \"npm run dev:weather\" \"npm run dev:restaurant\" \"npm run dev:budget\"",
     "dev:ui": "next dev --turbopack",
-    "dev:orchestrator": "agents/.venv/bin/python agents/orchestrator.py",
-    "dev:itinerary": "agents/.venv/bin/python agents/itinerary_agent.py",
-    "dev:budget": "agents/.venv/bin/python agents/budget_agent.py",
-    "dev:restaurant": "agents/.venv/bin/python agents/restaurant_agent.py",
-    "dev:weather": "agents/.venv/bin/python agents/weather_agent.py",
+    "dev:orchestrator": "PYTHONIOENCODING=utf-8 agents/.venv/bin/python agents/orchestrator.py",
+    "dev:itinerary": "PYTHONIOENCODING=utf-8 agents/.venv/bin/python agents/itinerary_agent.py",
+    "dev:budget": "PYTHONIOENCODING=utf-8 agents/.venv/bin/python agents/budget_agent.py",
+    "dev:restaurant": "PYTHONIOENCODING=utf-8 agents/.venv/bin/python agents/restaurant_agent.py",
+    "dev:weather": "PYTHONIOENCODING=utf-8 agents/.venv/bin/python agents/weather_agent.py",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
