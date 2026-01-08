@@ -31,12 +31,14 @@ services:
       - BUDGET_AGENT_URL=http://budget:9002
       - RESTAURANT_AGENT_URL=http://restaurant:9003
       - WEATHER_AGENT_URL=http://weather:9005
+      # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
+      - LOG_LEVEL=warning 
     ports:
       - "9000:9000"
     networks:
       - a2a-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/.well-known/agent.json"]
+      test: ["CMD-SHELL", "curl -s http://localhost:9000/ | grep -q 'Method Not Allowed'"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,12 +50,15 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ITINERARY_PORT=9001
+      - AGENT_URL=http://itinerary:9001/
+      # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
+      - LOG_LEVEL=warning 
     ports:
       - "9001:9001"
     networks:
       - a2a-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9001/.well-known/agent.json"]
+      test: ["CMD", "curl", "-f", "http://localhost:9001/.well-known/agent-card.json"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -65,12 +70,15 @@ services:
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - BUDGET_PORT=9002
+      - AGENT_URL=http://budget:9002/
+      # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
+      - LOG_LEVEL=warning 
     ports:
       - "9002:9002"
     networks:
       - a2a-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9002/.well-known/agent.json"]
+      test: ["CMD", "curl", "-f", "http://localhost:9002/.well-known/agent-card.json"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -82,12 +90,15 @@ services:
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - RESTAURANT_PORT=9003
+      - AGENT_URL=http://restaurant:9003/
+      # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
+      - LOG_LEVEL=warning 
     ports:
       - "9003:9003"
     networks:
       - a2a-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9003/.well-known/agent.json"]
+      test: ["CMD", "curl", "-f", "http://localhost:9003/.well-known/agent-card.json"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -99,12 +110,15 @@ services:
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - WEATHER_PORT=9005
+      - AGENT_URL=http://weather:9005/
+      # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
+      - LOG_LEVEL=warning 
     ports:
       - "9005:9005"
     networks:
       - a2a-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9005/.well-known/agent.json"]
+      test: ["CMD", "curl", "-f", "http://localhost:9005/.well-known/agent-card.json"]
       interval: 10s
       timeout: 5s
       retries: 5

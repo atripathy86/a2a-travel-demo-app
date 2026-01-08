@@ -31,6 +31,10 @@ load_dotenv()
 # Import necessary libraries for web server and environment variables
 import os
 import uvicorn
+import warnings
+
+# Filter out "Unclosed connection" warnings from aiohttp/httpx which are common in some async contexts
+warnings.filterwarnings("ignore", message="Unclosed connection")
 
 # Import FastAPI for creating HTTP endpoints
 from fastapi import FastAPI
@@ -174,4 +178,10 @@ if __name__ == "__main__":
     # Run the FastAPI application using uvicorn
     # host="0.0.0.0" allows external connections
     # port is configurable via environment variable
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    # log_level is configurable via LOG_LEVEL environment variable (default: info)
+    # - debug: Shows all messages including detailed request/response traces (too verbose for production)
+    # - info: Shows startup messages and access logs (e.g., "GET / HTTP/1.1 200 OK")
+    # - warning: Suppresses access logs, shows only potential issues and errors (cleaner output)
+    # - error: Shows only serious errors
+    log_level = os.getenv("LOG_LEVEL", "info").lower()
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level=log_level)

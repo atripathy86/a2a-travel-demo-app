@@ -290,7 +290,7 @@ skill = AgentSkill(
 public_agent_card = AgentCard(
     name='Budget Agent',
     description='ADK-powered agent that estimates travel budgets and creates cost breakdowns',
-    url=f'http://localhost:{port}/',
+    url=os.getenv('AGENT_URL', f'http://localhost:{port}/'),
     version='1.0.0',
     defaultInputModes=['text'],      # Accepts text input
     defaultOutputModes=['text'],     # Returns text output
@@ -396,7 +396,14 @@ def main():
     print(f"💰 Starting Budget Agent (ADK + A2A) on http://localhost:{port}")
     print(f"   Agent: {public_agent_card.name}")
     print(f"   Description: {public_agent_card.description}")
-    uvicorn.run(server.build(), host='0.0.0.0', port=port)
+    
+    # log_level is configurable via LOG_LEVEL environment variable (default: info)
+    # - debug: Shows all messages including detailed request/response traces (too verbose for production)
+    # - info: Shows startup messages and access logs (e.g., "GET / HTTP/1.1 200 OK")
+    # - warning: Suppresses access logs, shows only potential issues and errors (cleaner output)
+    # - error: Shows only serious errors
+    log_level = os.getenv("LOG_LEVEL", "info").lower()
+    uvicorn.run(server.build(), host='0.0.0.0', port=port, log_level=log_level)
 
 
 # === ENTRY POINT ===
