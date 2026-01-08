@@ -8,9 +8,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && \
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY *.py ./
+COPY budget/ ./budget/
+COPY weather/ ./weather/
+COPY restaurant/ ./restaurant/
+COPY orchestrator/ ./orchestrator/
+COPY itinerary/ ./itinerary/
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONIOENCODING=utf-8
 
-CMD ["python", "orchestrator.py"]
+CMD ["python", "-m", "orchestrator.agent"]

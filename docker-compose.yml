@@ -23,7 +23,7 @@ services:
   orchestrator:
     build:
       context: ./agents
-    command: python orchestrator.py
+    command: python -m orchestrator.agent
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - ORCHESTRATOR_PORT=9000
@@ -44,7 +44,7 @@ services:
   itinerary:
     build:
       context: ./agents
-    command: python itinerary_agent.py
+    command: python -m itinerary.agent
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ITINERARY_PORT=9001
@@ -61,7 +61,7 @@ services:
   budget:
     build:
       context: ./agents
-    command: python budget_agent.py
+    command: python -m budget.agent
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - BUDGET_PORT=9002
@@ -78,7 +78,7 @@ services:
   restaurant:
     build:
       context: ./agents
-    command: python restaurant_agent.py
+    command: python -m restaurant.agent
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - RESTAURANT_PORT=9003
@@ -95,7 +95,7 @@ services:
   weather:
     build:
       context: ./agents
-    command: python weather_agent.py
+    command: python -m weather.agent
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - WEATHER_PORT=9005
@@ -108,6 +108,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  adk-web:
+    build:
+      context: ./agents
+    command: adk web --host=0.0.0.0 --port 8080 .
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    ports:
+      - "8080:8080"
+    networks:
+      - a2a-network
 
 networks:
   a2a-network:

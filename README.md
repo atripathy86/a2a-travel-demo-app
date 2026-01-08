@@ -21,12 +21,13 @@ docker-compose up --build
 
 ### Option 2: Local Development
 
-Requires Node.js 18+ and Python 3.10+.
+- Requires Node.js 18+ and Python 3.10+.
 
 ```bash
-# Install dependencies
-npm install
-cd ui && npm install && cd ..
+
+# Configure
+# Edit .env and add your API keys
+cp .env.example .env
 
 # Python agents
 cd agents
@@ -35,22 +36,43 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cd ..
 
-# Configure and run
-cp .env.example .env
-# Edit .env and add your API keys
+# Front End
+# Install dependencies
+npm install
+cd ui && npm install && cd ..
+
+#Run Frontend (needs both the ui and agents stood up)
 npm run dev
 ```
+
+### Option 3: ADK Web UI (Agent Debugging)
+
+The ADK Web UI allows interaction with individual ADK agents directly for testing and debugging.
+
+**Local Development:**
+```bash
+# After setting up Python environment (see Option 2)
+npm run dev:adk-web
+#OR
+cd agents && .venv/bin/adk web --host=0.0.0.0 --port 8080 .
+# ADK Web UI available at http://localhost:8080
+```
+
+The ADK Web UI lets you select and chat with individual agents (Budget, Weather, Orchestrator) without going through the full application flow.
 
 ### Services
 
 Once running, the following services are available:
 
-- UI on `http://localhost:3000`
-- Orchestrator on `http://localhost:9000`
-- Itinerary Agent on `http://localhost:9001`
-- Budget Agent on `http://localhost:9002`
-- Restaurant Agent on `http://localhost:9003`
-- Weather Agent on `http://localhost:9005`
+| Service | URL | Description |
+|---------|-----|-------------|
+| UI | http://localhost:3000 | Main application |
+| ADK Web | http://localhost:8080 | Agent debugging UI |
+| Orchestrator | http://localhost:9000 | Coordinates all agents |
+| Itinerary Agent | http://localhost:9001 | Creates travel itineraries |
+| Budget Agent | http://localhost:9002 | Estimates travel costs |
+| Restaurant Agent | http://localhost:9003 | Recommends restaurants |
+| Weather Agent | http://localhost:9005 | Provides weather forecasts |
 
 ## Usage
 
@@ -130,11 +152,21 @@ a2a-travel-demo-app/
 │   └── Dockerfile
 │
 ├── agents/                           # Python agents
-│   ├── orchestrator.py               # Orchestrator (9000)
-│   ├── itinerary_agent.py            # LangGraph (9001)
-│   ├── budget_agent.py               # ADK (9002)
-│   ├── restaurant_agent.py           # LangGraph (9003)
-│   ├── weather_agent.py              # ADK (9005)
+│   ├── orchestrator/                 # ADK + AG-UI (9000)
+│   │   ├── agent.py
+│   │   └── __init__.py
+│   ├── itinerary/                    # LangGraph + A2A (9001)
+│   │   ├── agent.py
+│   │   └── __init__.py
+│   ├── budget/                       # ADK + A2A (9002)
+│   │   ├── agent.py
+│   │   └── __init__.py
+│   ├── restaurant/                   # LangGraph + A2A (9003)
+│   │   ├── agent.py
+│   │   └── __init__.py
+│   ├── weather/                      # ADK + A2A (9005)
+│   │   ├── agent.py
+│   │   └── __init__.py
 │   ├── requirements.txt
 │   └── Dockerfile
 │

@@ -5,11 +5,12 @@
   "scripts": {
     "dev": "concurrently --names \"UI,Orch,Itin,Weather,Rest,Budget\" --prefix-colors \"cyan,gray,green,blue,blue,blue\" \"npm run dev:ui\" \"npm run dev:orchestrator\" \"npm run dev:itinerary\" \"npm run dev:weather\" \"npm run dev:restaurant\" \"npm run dev:budget\"",
     "dev:ui": "npm run dev --prefix ui",
-    "dev:orchestrator": "PYTHONIOENCODING=utf-8 agents/.venv/bin/python agents/orchestrator.py",
-    "dev:itinerary": "PYTHONIOENCODING=utf-8 agents/.venv/bin/python agents/itinerary_agent.py",
-    "dev:budget": "PYTHONIOENCODING=utf-8 agents/.venv/bin/python agents/budget_agent.py",
-    "dev:restaurant": "PYTHONIOENCODING=utf-8 agents/.venv/bin/python agents/restaurant_agent.py",
-    "dev:weather": "PYTHONIOENCODING=utf-8 agents/.venv/bin/python agents/weather_agent.py",
+    "dev:orchestrator": "cd agents && PYTHONIOENCODING=utf-8 .venv/bin/python -m orchestrator.agent",
+    "dev:itinerary": "cd agents && PYTHONIOENCODING=utf-8 .venv/bin/python -m itinerary.agent",
+    "dev:budget": "cd agents && PYTHONIOENCODING=utf-8 .venv/bin/python -m budget.agent",
+    "dev:restaurant": "cd agents && PYTHONIOENCODING=utf-8 .venv/bin/python -m restaurant.agent",
+    "dev:weather": "cd agents && PYTHONIOENCODING=utf-8 .venv/bin/python -m weather.agent",
+    "dev:adk-web": "cd agents && .venv/bin/adk web --host=0.0.0.0 --port 8080 .",
     "build": "npm run build --prefix ui",
     "lint": "npm run lint --prefix ui"
   },
