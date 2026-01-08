@@ -5,10 +5,10 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
-COPY agents/requirements.txt ./requirements.txt
+COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY agents/*.py ./
+COPY *.py ./
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONIOENCODING=utf-8

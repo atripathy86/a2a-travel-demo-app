@@ -24,8 +24,9 @@ docker-compose up --build
 Requires Node.js 18+ and Python 3.10+.
 
 ```bash
-# Frontend
+# Install dependencies
 npm install
+cd ui && npm install && cd ..
 
 # Python agents
 cd agents
@@ -116,23 +117,29 @@ The demo includes multi-framework integration, structured JSON outputs, generati
 ## Project Structure
 
 ```
-ag-ui-a2a-demo/
-├── app/
-│   ├── api/copilotkit/route.ts       # A2A middleware setup
-│   └── page.tsx                      # Main UI
-│
-├── components/
-│   ├── a2a/                          # A2A message components
-│   ├── travel-chat.tsx               # Chat orchestration
-│   └── [other UI components]
+a2a-travel-demo-app/
+├── ui/                               # Next.js frontend
+│   ├── app/
+│   │   ├── api/copilotkit/route.ts   # A2A middleware setup
+│   │   └── page.tsx                  # Main UI
+│   ├── components/
+│   │   ├── a2a/                      # A2A message components
+│   │   ├── travel-chat.tsx           # Chat orchestration
+│   │   └── [other UI components]
+│   ├── package.json
+│   └── Dockerfile
 │
 ├── agents/                           # Python agents
 │   ├── orchestrator.py               # Orchestrator (9000)
 │   ├── itinerary_agent.py            # LangGraph (9001)
 │   ├── budget_agent.py               # ADK (9002)
 │   ├── restaurant_agent.py           # LangGraph (9003)
-│   └── weather_agent.py              # ADK (9005)
+│   ├── weather_agent.py              # ADK (9005)
+│   ├── requirements.txt
+│   └── Dockerfile
 │
+├── docker-compose.yml
+├── package.json
 └── .env.example
 ```
 

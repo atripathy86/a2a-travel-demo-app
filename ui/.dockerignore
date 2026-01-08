@@ -5,7 +5,6 @@ node_modules
 *.md
 .env
 .env.local
-agents/.venv
 __pycache__
 *.pyc
 .DS_Store
