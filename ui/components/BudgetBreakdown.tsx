@@ -26,6 +26,10 @@ interface BudgetBreakdownProps {
 }
 
 export const BudgetBreakdown: React.FC<BudgetBreakdownProps> = ({ data }) => {
+  if (!data?.breakdown || !Array.isArray(data.breakdown)) {
+    return null;
+  }
+
   // Format currency
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -74,7 +78,7 @@ export const BudgetBreakdown: React.FC<BudgetBreakdownProps> = ({ data }) => {
 
       {/* Breakdown */}
       <div className="space-y-2">
-        {data.breakdown.map((category, index) => {
+        {data.breakdown?.map((category, index) => {
           const colors = getCategoryColor(index);
           return (
             <div key={index} className="bg-white/80 backdrop-blur-sm rounded-lg p-2 shadow-elevation-sm border border-[#E9E9EF]">

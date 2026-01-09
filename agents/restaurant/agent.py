@@ -42,6 +42,7 @@ from a2a.utils import new_agent_text_message
 
 # Import Google ADK (Agent Development Kit) components for LLM integration
 from google.adk.agents.llm_agent import LlmAgent
+from google.adk.models.lite_llm import LiteLlm  # For multi-model support
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
@@ -49,20 +50,56 @@ from google.adk.artifacts import InMemoryArtifactService
 from google.genai import types
 
 
+def _extract_first_json(text: str) -> str:
+    """Extract first complete JSON object using brace matching."""
+    start = text.find("{")
+    if start == -1:
+        return text
+    depth = 0
+    in_string = False
+    escape = False
+    for i, char in enumerate(text[start:], start):
+        if escape:
+            escape = False
+            continue
+        if char == "\\":
+            escape = True
+            continue
+        if char == '"' and not escape:
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+    return text
+
+
 # === DATA MODELS ===
 # These Pydantic models define the structure of our restaurant recommendation data
 # This ensures type safety and automatic validation of the generated content
 
+
 class DayMeals(BaseModel):
     """Represents meal recommendations for a single day of travel"""
+
     day: int = Field(description="Day number")
-    breakfast: str = Field(description="Breakfast recommendation with restaurant name and dish")
+    breakfast: str = Field(
+        description="Breakfast recommendation with restaurant name and dish"
+    )
     lunch: str = Field(description="Lunch recommendation with restaurant name and dish")
-    dinner: str = Field(description="Dinner recommendation with restaurant name and dish")
+    dinner: str = Field(
+        description="Dinner recommendation with restaurant name and dish"
+    )
 
 
 class StructuredRestaurants(BaseModel):
     """Top-level model for the complete restaurant recommendations"""
+
     destination: str = Field(description="Destination city/location")
     days: int = Field(description="Number of days")
     meals: List[DayMeals] = Field(description="Day-by-day meal recommendations")
@@ -72,50 +109,68 @@ class StructuredRestaurants(BaseModel):
 class RestaurantAgent:
     """
     Main agent class that handles restaurant recommendations using Google ADK.
-    
+
     This agent uses Google's Agent Development Kit to:
     1. Create an LLM-powered agent with specific instructions
     2. Process restaurant recommendation requests
     3. Return structured JSON responses with meal suggestions
     """
-    
+
     def __init__(self):
         """Initialize the agent with Google ADK components and services"""
         # Build the core LLM agent with restaurant-specific instructions
         self._agent = self._build_agent()
-        
+
         # Set up user identity for session management
-        self._user_id = 'remote_agent'
-        
+        self._user_id = "remote_agent"
+
         # Create the ADK runner that orchestrates the agent's execution
         # This includes session management, memory, and artifact storage
         self._runner = Runner(
             app_name=self._agent.name,
             agent=self._agent,
             artifact_service=InMemoryArtifactService(),  # For storing generated content
-            session_service=InMemorySessionService(),    # For conversation history
-            memory_service=InMemoryMemoryService(),      # For agent memory
+            session_service=InMemorySessionService(),  # For conversation history
+            memory_service=InMemoryMemoryService(),  # For agent memory
         )
 
     def _build_agent(self) -> LlmAgent:
         """
         Create and configure the Google ADK LLM agent.
-        
+
         This method:
         1. Gets the Gemini model name from environment variables
         2. Creates an LlmAgent with detailed restaurant recommendation instructions
         3. Configures the agent to return structured JSON responses
-        
+
         Returns:
             Configured LlmAgent instance ready for restaurant recommendations
         """
-        # Get Gemini model name from environment, default to flash model for speed
-        model_name = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
+        # === LiteLLM Configuration (Multi-Model Support) ===
+        litellm_model = os.getenv("MODEL")
+        litellm_api_key = os.getenv("API_KEY")
+        litellm_api_base = os.getenv("API_BASE")
+        google_api_key = os.getenv("GOOGLE_API_KEY")
+
+        if litellm_model and litellm_api_key:
+            kwargs = {"model": litellm_model, "api_key": litellm_api_key}
+            if litellm_api_base:
+                kwargs["api_base"] = litellm_api_base
+            model = LiteLlm(**kwargs)
+        elif google_api_key:
+            model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+        else:
+            raise ValueError(
+                "No model configuration found. Set MODEL + API_KEY (+ optional API_BASE) "
+                "for LiteLLM, or GOOGLE_API_KEY for Gemini."
+            )
+            # # Fallback: Original Gemini model
+            # model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
         return LlmAgent(
-            model=model_name,
-            name='restaurant_agent',
-            description='An agent that provides restaurant and dining recommendations for travelers',
+            model=model,
+            name="restaurant_agent",
+            description="An agent that provides restaurant and dining recommendations for travelers",
             instruction="""
 You are a restaurant recommendation agent for travelers. Your role is to provide day-by-day
 meal recommendations (breakfast, lunch, dinner) that match the traveler's itinerary.
@@ -161,18 +216,18 @@ Return ONLY valid JSON, no markdown code blocks, no other text.
     async def invoke(self, query: str, session_id: str) -> str:
         """
         Main entry point for generating restaurant recommendations.
-        
+
         This method:
         1. Gets or creates a session for conversation continuity
         2. Formats the user query as ADK content
         3. Runs the agent to generate recommendations
         4. Processes and validates the response
         5. Returns structured JSON with restaurant recommendations
-        
+
         Args:
             query: User's restaurant recommendation request
             session_id: Unique session identifier for conversation continuity
-            
+
         Returns:
             JSON string containing structured restaurant recommendations
         """
@@ -184,9 +239,7 @@ Return ONLY valid JSON, no markdown code blocks, no other text.
         )
 
         # Step 2: Format user query as ADK content object
-        content = types.Content(
-            role='user', parts=[types.Part.from_text(text=query)]
-        )
+        content = types.Content(role="user", parts=[types.Part.from_text(text=query)])
 
         # Step 3: Create new session if none exists
         if session is None:
@@ -198,11 +251,9 @@ Return ONLY valid JSON, no markdown code blocks, no other text.
             )
 
         # Step 4: Run the agent and collect response
-        response_text = ''
+        response_text = ""
         async for event in self._runner.run_async(
-            user_id=self._user_id,
-            session_id=session.id,
-            new_message=content
+            user_id=self._user_id, session_id=session.id, new_message=content
         ):
             # Wait for the final response event
             if event.is_final_response():
@@ -212,7 +263,7 @@ Return ONLY valid JSON, no markdown code blocks, no other text.
                     and event.content.parts[0].text
                 ):
                     # Combine all text parts into a single response
-                    response_text = '\n'.join(
+                    response_text = "\n".join(
                         [p.text for p in event.content.parts if p.text]
                     )
                 break
@@ -226,33 +277,37 @@ Return ONLY valid JSON, no markdown code blocks, no other text.
         elif "```" in content_str:
             content_str = content_str.split("```")[1].split("```")[0].strip()
 
+        content_str = _extract_first_json(content_str)
+
         # Step 6: Validate and structure the response
         try:
             # Parse JSON from LLM response
             structured_data = json.loads(content_str)
-            
+
             # Validate structure using Pydantic model
             validated_restaurants = StructuredRestaurants(**structured_data)
-            
+
             # Return formatted JSON string
             final_response = json.dumps(validated_restaurants.model_dump(), indent=2)
             print("✅ Successfully created structured restaurant recommendations")
             return final_response
-            
+
         except json.JSONDecodeError as e:
             # Handle JSON parsing errors
             print(f"❌ JSON parsing error: {e}")
             print(f"Content: {content_str}")
-            return json.dumps({
-                "error": "Failed to generate structured restaurant recommendations",
-                "raw_content": content_str[:200]  # Include first 200 chars for debugging
-            })
+            return json.dumps(
+                {
+                    "error": "Failed to generate structured restaurant recommendations",
+                    "raw_content": content_str[
+                        :200
+                    ],  # Include first 200 chars for debugging
+                }
+            )
         except Exception as e:
             # Handle Pydantic validation errors
             print(f"❌ Validation error: {e}")
-            return json.dumps({
-                "error": f"Validation failed: {str(e)}"
-            })
+            return json.dumps({"error": f"Validation failed: {str(e)}"})
 
 
 # === A2A PROTOCOL CONFIGURATION ===
@@ -263,27 +318,27 @@ port = int(os.getenv("RESTAURANT_PORT", 9003))
 
 # Define the specific skill this agent provides
 skill = AgentSkill(
-    id='restaurant_agent',
-    name='Restaurant Recommendation Agent',
-    description='Provides restaurant and dining recommendations for travelers using ADK',
-    tags=['travel', 'restaurants', 'dining', 'food', 'adk'],
+    id="restaurant_agent",
+    name="Restaurant Recommendation Agent",
+    description="Provides restaurant and dining recommendations for travelers using ADK",
+    tags=["travel", "restaurants", "dining", "food", "adk"],
     examples=[
-        'Recommend restaurants for my trip to Tokyo',
-        'Where should I eat in Paris?',
-        'Find good restaurants near my itinerary locations'
+        "Recommend restaurants for my trip to Tokyo",
+        "Where should I eat in Paris?",
+        "Find good restaurants near my itinerary locations",
     ],
 )
 
 # Define the public agent card that other agents can discover
 public_agent_card = AgentCard(
-    name='Restaurant Agent',
-    description='ADK-powered agent that provides personalized restaurant and dining recommendations for travelers',
-    url=os.getenv('AGENT_URL', f'http://localhost:{port}/'),
-    version='1.0.0',
-    defaultInputModes=['text'],      # Accepts text input
-    defaultOutputModes=['text'],     # Returns text output
+    name="Restaurant Agent",
+    description="ADK-powered agent that provides personalized restaurant and dining recommendations for travelers",
+    url=os.getenv("AGENT_URL", f"http://localhost:{port}/"),
+    version="1.0.0",
+    defaultInputModes=["text"],  # Accepts text input
+    defaultOutputModes=["text"],  # Returns text output
     capabilities=AgentCapabilities(streaming=True),  # Supports streaming responses
-    skills=[skill],                  # List of skills this agent provides
+    skills=[skill],  # List of skills this agent provides
     supportsAuthenticatedExtendedCard=False,  # No authentication required
 )
 
@@ -292,13 +347,13 @@ public_agent_card = AgentCard(
 class RestaurantAgentExecutor(AgentExecutor):
     """
     Executor class that bridges A2A Protocol with our RestaurantAgent.
-    
+
     This class handles the A2A Protocol lifecycle:
     - Receives execution requests from other agents
     - Delegates to our RestaurantAgent for processing
     - Sends results back through the event queue
     """
-    
+
     def __init__(self):
         """Initialize the executor with an instance of our agent"""
         self.agent = RestaurantAgent()
@@ -310,73 +365,76 @@ class RestaurantAgentExecutor(AgentExecutor):
     ) -> None:
         """
         Execute a restaurant recommendation request.
-        
+
         This method:
         1. Extracts the user query from the request context
         2. Gets or generates a session ID for conversation continuity
         3. Calls our agent to generate recommendations
         4. Sends the response through the A2A event queue
-        
+
         Args:
             context: Request context containing the message and metadata
             event_queue: Queue for sending response events back to caller
         """
         # Extract user query from the request context
         query = context.get_user_input()
-        
+
         # Get session ID for conversation continuity (fallback to default)
-        session_id = getattr(context, 'context_id', 'default_session')
-        
+        session_id = getattr(context, "context_id", "default_session")
+
         # Generate restaurant recommendations using our agent
         final_content = await self.agent.invoke(query, session_id)
-        
+
         # Send result back through A2A Protocol event queue
         await event_queue.enqueue_event(new_agent_text_message(final_content))
 
-    async def cancel(
-        self, context: RequestContext, event_queue: EventQueue
-    ) -> None:
+    async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
         """
         Handle cancellation requests (not implemented).
-        
+
         For this agent, we don't support cancellation since restaurant
         recommendation generation is typically fast and non-interruptible.
         """
-        raise Exception('cancel not supported')
+        raise Exception("cancel not supported")
 
 
 # === MAIN APPLICATION SETUP ===
 def main():
     """
     Main function that sets up and starts the A2A Protocol server.
-    
+
     This function:
     1. Checks for required environment variables (API keys)
     2. Sets up the A2A Protocol request handler
     3. Creates the Starlette web application
     4. Starts the uvicorn server with detailed logging
     """
-    
-    # Check for required Google API key (either variant)
-    if not os.getenv("GOOGLE_API_KEY") and not os.getenv("GEMINI_API_KEY"):
+
+    # Check for required API key (LiteLLM or Google)
+    if (
+        not os.getenv("API_KEY")
+        and not os.getenv("GOOGLE_API_KEY")
+        and not os.getenv("GEMINI_API_KEY")
+    ):
         print("⚠️  Warning: No API key found!")
-        print("   Set either GOOGLE_API_KEY or GEMINI_API_KEY environment variable")
-        print("   Example: export GOOGLE_API_KEY='your-key-here'")
-        print("   Get a key from: https://aistudio.google.com/app/apikey")
+        print(
+            "   Set API_KEY (for LiteLLM), GOOGLE_API_KEY, or GEMINI_API_KEY environment variable"
+        )
+        print("   For LiteLLM, also set MODEL and optionally API_BASE")
         print()
 
     # Create the A2A Protocol request handler
     # This handles incoming requests and manages task lifecycle
     request_handler = DefaultRequestHandler(
         agent_executor=RestaurantAgentExecutor(),  # Our custom executor
-        task_store=InMemoryTaskStore(),            # Simple in-memory task storage
+        task_store=InMemoryTaskStore(),  # Simple in-memory task storage
     )
 
     # Create the A2A Starlette web application
     # This provides the HTTP endpoints for A2A Protocol communication
     server = A2AStarletteApplication(
-        agent_card=public_agent_card,           # Public agent information
-        http_handler=request_handler,           # Request processing logic
+        agent_card=public_agent_card,  # Public agent information
+        http_handler=request_handler,  # Request processing logic
         extended_agent_card=public_agent_card,  # Extended agent info (same as public)
     )
 
@@ -384,18 +442,18 @@ def main():
     print(f"🍽️  Starting Restaurant Agent (ADK + A2A) on http://localhost:{port}")
     print(f"   Agent: {public_agent_card.name}")
     print(f"   Description: {public_agent_card.description}")
-    
+
     # log_level is configurable via LOG_LEVEL environment variable (default: info)
     # - debug: Shows all messages including detailed request/response traces (too verbose for production)
     # - info: Shows startup messages and access logs (e.g., "GET / HTTP/1.1 200 OK")
     # - warning: Suppresses access logs, shows only potential issues and errors (cleaner output)
     # - error: Shows only serious errors
     log_level = os.getenv("LOG_LEVEL", "info").lower()
-    uvicorn.run(server.build(), host='0.0.0.0', port=port, log_level=log_level)
+    uvicorn.run(server.build(), host="0.0.0.0", port=port, log_level=log_level)
 
 
 # === ENTRY POINT ===
-if __name__ == '__main__':
+if __name__ == "__main__":
     """
     Entry point when script is run directly.
     

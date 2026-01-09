@@ -220,6 +220,34 @@ Gemini 2.5 Pro sometimes generates function call names with newline characters e
 model="gemini-2.0-flash",  # Using 2.0-flash to avoid the issue
 ```
 
+### LiteLLM Pydantic Serialization Warnings
+
+**Issue:** When using LiteLLM for multi-model support, you may see warnings like:
+```
+UserWarning: Pydantic serializer warnings:
+  PydanticSerializationUnexpectedValue(Expected 10 fields but got 6: Expected `Message`...
+  PydanticSerializationUnexpectedValue(Expected `StreamingChoices`...
+```
+
+**Cause:** LiteLLM's internal Pydantic models use `del self.field` to remove optional fields, which breaks Pydantic's field tracking during serialization.
+
+**Impact:** These warnings are cosmetic only - functionality is not affected.
+
+**Status:** This is a known LiteLLM bug ([BerriAI/litellm#11759](https://github.com/BerriAI/litellm/issues/11759)). A fix is pending in [PR #16299](https://github.com/BerriAI/litellm/pull/16299). The warnings will disappear once the fix is merged and released.
+
+### AG-UI ADK Streaming Message Warnings
+
+**Issue:** You may see warnings like:
+```
+🚨 Force-closing unterminated streaming message: a1d0dc28-8f84-477e-bc60-0ac8054e08b7
+```
+
+**Cause:** The AG-UI ADK library (`ag_ui_adk`) forcefully closes streaming messages that weren't properly terminated before the agent run completed. This is a safety mechanism to ensure message streams are always properly closed.
+
+**Impact:** Cosmetic only - the message is still delivered correctly to the frontend.
+
+**Status:** This is internal behavior of the `ag_ui_adk` package's `event_translator.py`. The warning appears when there's a timing mismatch between the agent's response completion and the streaming message lifecycle.
+
 ## Learn More
 
 - [AG-UI Protocol](https://docs.ag-ui.com)

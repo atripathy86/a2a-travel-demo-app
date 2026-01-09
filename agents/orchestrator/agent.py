@@ -26,6 +26,7 @@ from __future__ import annotations
 
 # Load environment variables from .env file before other imports
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Import necessary libraries for web server and environment variables
@@ -44,16 +45,41 @@ from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
 
 # Import Google ADK components for LLM agent creation
 from google.adk.agents import LlmAgent
+from google.adk.models.lite_llm import LiteLlm  # For multi-model support
 
 
 # === ORCHESTRATOR AGENT CONFIGURATION ===
 # Create the main orchestrator agent using Google ADK's LlmAgent
 # This agent coordinates all travel planning activities and manages the workflow
 
+
+def _get_model():
+    """Get model configuration - LiteLLM if configured, otherwise Gemini"""
+    model_name = os.getenv("MODEL")
+    api_key = os.getenv("API_KEY")
+    api_base = os.getenv("API_BASE")
+    google_api_key = os.getenv("GOOGLE_API_KEY")
+
+    if model_name and api_key:
+        kwargs = {"model": model_name, "api_key": api_key}
+        if api_base:
+            kwargs["api_base"] = api_base
+        return LiteLlm(**kwargs)
+    elif google_api_key:
+        return "gemini-2.0-flash"
+    else:
+        raise ValueError(
+            "No model configuration found. Set MODEL + API_KEY (+ optional API_BASE) "
+            "for LiteLLM, or GOOGLE_API_KEY for Gemini."
+        )
+        # # Fallback: Original Gemini model
+        # # model="gemini-2.5-pro",  # Has function name wrapping issue (adds newlines to long tool names)
+        # return "gemini-2.0-flash"
+
+
 orchestrator_agent = LlmAgent(
     name="OrchestratorAgent",
-    # model="gemini-2.5-pro",  # Has function name wrapping issue (adds newlines to long tool names)
-    model="gemini-2.0-flash",  # Using 2.0-flash to avoid the issue
+    model=_get_model(),
     instruction="""
     You are a travel planning orchestrator agent. Your role is to coordinate specialized agents
     to create personalized travel plans.
@@ -103,13 +129,15 @@ orchestrator_agent = LlmAgent(
        - Pass: city, numberOfDays, numberOfPeople, budgetLevel from trip requirements
        - Wait for detailed budget breakdown
        - This requires user approval via the request_budget_approval tool
+       - You MUST ASK user for approval after the Budget Agent has responded BUT BEFORE using it.
 
     IMPORTANT WORKFLOW DETAILS:
     - ALWAYS START by calling 'gather_trip_requirements' FIRST before any agent calls
     - The Itinerary Agent creates the structure but leaves meals empty
     - The Restaurant Agent fills in the meals section with specific recommendations
     - The Weather Agent provides context for outdoor activities and what to pack
-    - The Budget Agent runs last and requires human-in-the-loop approval
+    - The Budget Agent runs last and requires human-in-the-loop approval.
+    - You MUST ASK user for approval after the Budget Agent has responded BUT BEFORE using it.
 
     TRIP REQUIREMENTS EXTRACTION EXAMPLES:
     - "Plan a trip to Paris" -> call gather_trip_requirements with city: "Paris"
@@ -135,11 +163,11 @@ orchestrator_agent = LlmAgent(
 # This enables frontend communication and provides the interface for user interactions
 
 adk_orchestrator_agent = ADKAgent(
-    adk_agent=orchestrator_agent,          # The core LLM agent we created above
-    app_name="orchestrator_app",           # Unique application identifier
-    user_id="demo_user",                   # Default user ID for demo purposes
-    session_timeout_seconds=3600,          # Session timeout (1 hour)
-    use_in_memory_services=True            # Use in-memory storage for simplicity
+    adk_agent=orchestrator_agent,  # The core LLM agent we created above
+    app_name="orchestrator_app",  # Unique application identifier
+    user_id="demo_user",  # Default user ID for demo purposes
+    session_timeout_seconds=3600,  # Session timeout (1 hour)
+    use_in_memory_services=True,  # Use in-memory storage for simplicity
 )
 
 # === FASTAPI WEB APPLICATION SETUP ===
@@ -162,20 +190,20 @@ if __name__ == "__main__":
     2. Configures the server port
     3. Starts the uvicorn server with the FastAPI application
     """
-    
-    # Check for required Google API key
-    if not os.getenv("GOOGLE_API_KEY"):
-        print("⚠️  Warning: GOOGLE_API_KEY environment variable not set!")
-        print("   Set it with: export GOOGLE_API_KEY='your-key-here'")
-        print("   Get a key from: https://aistudio.google.com/app/apikey")
+
+    # Check for required API key (LiteLLM or Google)
+    if not os.getenv("API_KEY") and not os.getenv("GOOGLE_API_KEY"):
+        print("⚠️  Warning: No API key found!")
+        print("   Set API_KEY (for LiteLLM) or GOOGLE_API_KEY environment variable")
+        print("   For LiteLLM, also set MODEL and optionally API_BASE")
         print()
 
     # Get server port from environment variable, default to 9000
     port = int(os.getenv("ORCHESTRATOR_PORT", 9000))
-    
+
     # Start the server with detailed information
     print(f"🚀 Starting Orchestrator Agent (ADK + AG-UI) on http://localhost:{port}")
-    
+
     # Run the FastAPI application using uvicorn
     # host="0.0.0.0" allows external connections
     # port is configurable via environment variable

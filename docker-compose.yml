@@ -26,6 +26,9 @@ services:
     command: python -m orchestrator.agent
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - MODEL=${MODEL}
+      - API_BASE=${API_BASE}
+      - API_KEY=${API_KEY}
       - ORCHESTRATOR_PORT=9000
       - ITINERARY_AGENT_URL=http://itinerary:9001
       - BUDGET_AGENT_URL=http://budget:9002
@@ -49,6 +52,9 @@ services:
     command: python -m itinerary.agent
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MODEL=${MODEL}
+      - API_BASE=${API_BASE}
+      - API_KEY=${API_KEY}
       - ITINERARY_PORT=9001
       - AGENT_URL=http://itinerary:9001/
       # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
@@ -69,6 +75,9 @@ services:
     command: python -m budget.agent
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - MODEL=${MODEL}
+      - API_BASE=${API_BASE}
+      - API_KEY=${API_KEY}
       - BUDGET_PORT=9002
       - AGENT_URL=http://budget:9002/
       # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
@@ -89,6 +98,9 @@ services:
     command: python -m restaurant.agent
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - MODEL=${MODEL}
+      - API_BASE=${API_BASE}
+      - API_KEY=${API_KEY}
       - RESTAURANT_PORT=9003
       - AGENT_URL=http://restaurant:9003/
       # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
@@ -109,6 +121,9 @@ services:
     command: python -m weather.agent
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - MODEL=${MODEL}
+      - API_BASE=${API_BASE}
+      - API_KEY=${API_KEY}
       - WEATHER_PORT=9005
       - AGENT_URL=http://weather:9005/
       # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
@@ -129,6 +144,9 @@ services:
     command: adk web --host=0.0.0.0 --port 8080 .
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - MODEL=${MODEL}
+      - API_BASE=${API_BASE}
+      - API_KEY=${API_KEY}
     ports:
       - "8080:8080"
     networks:
