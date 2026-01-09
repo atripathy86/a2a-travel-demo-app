@@ -193,6 +193,33 @@ Ensure `.env` contains `GOOGLE_API_KEY` and `OPENAI_API_KEY`
 **Python issues?**
 Activate the virtual environment: `cd agents && source .venv/bin/activate`
 
+## Known Issues & Fixes
+
+### google-adk Version Compatibility
+
+**Issue:** `ValueError: No function call event found for function responses ids`
+
+This error occurs with newer versions of google-adk (1.22.0+) due to a bug in event history management during nested agent workflows.
+
+**Fix:** Pin google-adk to version 1.21.0 in `agents/requirements.txt`:
+```
+google-adk==1.21.0
+```
+
+**Reference:** [google/adk-python#1805](https://github.com/google/adk-python/issues/1805)
+
+### Gemini 2.5 Pro Function Name Wrapping
+
+**Issue:** `ValueError: Tool 'send_\nmessage_to_a2a_agent' not found`
+
+Gemini 2.5 Pro sometimes generates function call names with newline characters embedded in them, causing tool lookup failures.
+
+**Fix:** Use `gemini-2.0-flash` instead of `gemini-2.5-pro` for the orchestrator agent in `agents/orchestrator/agent.py`:
+```python
+# model="gemini-2.5-pro",  # Has function name wrapping issue
+model="gemini-2.0-flash",  # Using 2.0-flash to avoid the issue
+```
+
 ## Learn More
 
 - [AG-UI Protocol](https://docs.ag-ui.com)

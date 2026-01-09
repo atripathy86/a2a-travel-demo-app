@@ -26,7 +26,7 @@ a2a-sdk[http-server]
 # google-adk: Google's framework for building AI agents with Gemini models
 # Used by: Orchestrator, Budget Agent, Weather Agent, Restaurant Agent
 # litellm: Unified interface for multiple LLM providers (used by ADK)
-google-adk>=0.1.0
+google-adk==1.21.0
 litellm>=1.0.0
 
 # ============================================================================
