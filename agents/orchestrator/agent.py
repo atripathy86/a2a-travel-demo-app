@@ -52,7 +52,8 @@ from google.adk.agents import LlmAgent
 
 orchestrator_agent = LlmAgent(
     name="OrchestratorAgent",
-    model="gemini-2.5-pro",  # Use the more powerful Pro model for complex orchestration
+    # model="gemini-2.5-pro",  # Has function name wrapping issue (adds newlines to long tool names)
+    model="gemini-2.0-flash",  # Using 2.0-flash to avoid the issue
     instruction="""
     You are a travel planning orchestrator agent. Your role is to coordinate specialized agents
     to create personalized travel plans.

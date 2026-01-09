@@ -94,6 +94,7 @@ Desktop.ini
 !.env.example
 *.md
 !README.md
+!LANGFUSE_INTEGRATION.md
 examples/
 docs/
 .cursorrules

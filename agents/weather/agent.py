@@ -21,7 +21,6 @@ Key Components:
 import uvicorn
 import os
 import json
-import base64
 from typing import List
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -36,16 +35,26 @@ def _init_langfuse():
     public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
     secret_key = os.getenv("LANGFUSE_SECRET_KEY")
     if not (public_key and secret_key):
+        print("⚠️  Langfuse credentials not configured, skipping observability")
         return
-    host = os.getenv("LANGFUSE_BASE_URL", "https://cloud.langfuse.com")
-    auth = base64.b64encode(f"{public_key}:{secret_key}".encode()).decode()
-    os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", f"{host}/api/public/otel")
-    os.environ.setdefault("OTEL_EXPORTER_OTLP_HEADERS", f"Authorization=Basic {auth}")
+
     try:
+        # Initialize Langfuse client
+        from langfuse import get_client
+        langfuse = get_client()
+
+        if langfuse.auth_check():
+            print("✅ Langfuse client authenticated")
+        else:
+            print("❌ Langfuse authentication failed")
+            return
+
+        # Enable OpenTelemetry instrumentation for ADK
         from openinference.instrumentation.google_adk import GoogleADKInstrumentor
         GoogleADKInstrumentor().instrument()
-    except Exception:
-        pass
+        print("✅ Langfuse ADK instrumentation enabled")
+    except Exception as e:
+        print(f"❌ Langfuse initialization failed: {e}")
 
 _init_langfuse()
 

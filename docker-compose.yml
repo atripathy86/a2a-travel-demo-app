@@ -71,6 +71,10 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - BUDGET_PORT=9002
       - AGENT_URL=http://budget:9002/
+      # Langfuse observability (optional)
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL}
       # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
       - LOG_LEVEL=warning 
     ports:
@@ -91,6 +95,10 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - RESTAURANT_PORT=9003
       - AGENT_URL=http://restaurant:9003/
+      # Langfuse observability (optional)
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL}
       # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
       - LOG_LEVEL=warning 
     ports:
@@ -111,6 +119,10 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - WEATHER_PORT=9005
       - AGENT_URL=http://weather:9005/
+      # Langfuse observability (optional)
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL}
       # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
       - LOG_LEVEL=warning 
     ports:

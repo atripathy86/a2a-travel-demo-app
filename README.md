@@ -182,28 +182,20 @@ a2a-travel-demo-app/
 - **Protocols**: A2A (agent-to-agent), AG-UI (agent-UI)
 - **Middleware**: @ag-ui/a2a-middleware
 
-## Observability with Langfuse (CURRENTLY BROKEN)
+## Observability with Langfuse (PARTIALLY WORKING)
 
-> **WARNING:** Langfuse integration is currently broken and causes the orchestrator to fail with:
-> `ValueError: No function call event found for function responses ids`
+Langfuse integration is included for the ADK agents (Budget, Weather, Restaurant). The client authenticates successfully but traces are not exported due to an upstream bug with OpenTelemetry context propagation in async generators.
 
-The `openinference-instrumentation-google-adk` package has auto-instrumentation that affects all ADK usage in the shared Docker image, including the orchestrator which uses the AG-UI wrapper (`ag-ui-adk`). This causes function call event tracking errors.
+**Status:** App works correctly, but you'll see "Failed to detach context" errors in logs.
 
-### Workaround Options
-
-1. **Use separate Docker images** - One for orchestrator (without Langfuse packages), another for A2A agents (with Langfuse)
-2. **Wait for a fix** - In either `openinference-instrumentation-google-adk` or `ag-ui-adk`
-3. **Use alternative observability** - A solution that doesn't conflict with AG-UI
-
-### If You Want to Try Anyway
-
-The code is in place for Budget, Weather, and Restaurant agents. Add to `.env`:
-
+To enable, add to `.env`:
 ```bash
 LANGFUSE_PUBLIC_KEY=your_public_key
 LANGFUSE_SECRET_KEY=your_secret_key
-LANGFUSE_BASE_URL=https://cloud.langfuse.com
+LANGFUSE_BASE_URL=https://us.cloud.langfuse.com
 ```
+
+See [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) for full details on the known issues and workarounds.
 
 ## Troubleshooting
 
