@@ -92,14 +92,14 @@ Agent interactions are visible in the UI with message flow visualization.
 
 This demo shows how specialized agents built with different frameworks can communicate via the A2A protocol:
 
-### LangGraph Agents (Python + OpenAI)
+### LangGraph Agent (Python + OpenAI)
 
 - **Itinerary Agent** (Port 9001) - Creates day-by-day travel itineraries
-- **Restaurant Agent** (Port 9003) - Recommends meal plans
 
 ### ADK Agents (Python + Gemini)
 
 - **Budget Agent** (Port 9002) - Estimates travel costs
+- **Restaurant Agent** (Port 9003) - Recommends meal plans
 - **Weather Agent** (Port 9005) - Provides weather forecasts
 
 ### Orchestrator
@@ -121,12 +121,12 @@ The demo includes multi-framework integration, structured JSON outputs, generati
 └──────┬───────────────────────────────────┘
        │ A2A Protocol
        │
-       ├─────► LangGraph Agents (OpenAI)
-       │       ├── Itinerary (9001)
-       │       └── Restaurant (9003)
+       ├─────► LangGraph Agent (OpenAI)
+       │       └── Itinerary (9001)
        │
        └─────► ADK Agents (Gemini)
                ├── Budget (9002)
+               ├── Restaurant (9003)
                └── Weather (9005)
        ▲
        │
@@ -161,7 +161,7 @@ a2a-travel-demo-app/
 │   ├── budget/                       # ADK + A2A (9002)
 │   │   ├── agent.py
 │   │   └── __init__.py
-│   ├── restaurant/                   # LangGraph + A2A (9003)
+│   ├── restaurant/                   # ADK + A2A (9003)
 │   │   ├── agent.py
 │   │   └── __init__.py
 │   ├── weather/                      # ADK + A2A (9005)
@@ -182,6 +182,29 @@ a2a-travel-demo-app/
 - **Protocols**: A2A (agent-to-agent), AG-UI (agent-UI)
 - **Middleware**: @ag-ui/a2a-middleware
 
+## Observability with Langfuse (CURRENTLY BROKEN)
+
+> **WARNING:** Langfuse integration is currently broken and causes the orchestrator to fail with:
+> `ValueError: No function call event found for function responses ids`
+
+The `openinference-instrumentation-google-adk` package has auto-instrumentation that affects all ADK usage in the shared Docker image, including the orchestrator which uses the AG-UI wrapper (`ag-ui-adk`). This causes function call event tracking errors.
+
+### Workaround Options
+
+1. **Use separate Docker images** - One for orchestrator (without Langfuse packages), another for A2A agents (with Langfuse)
+2. **Wait for a fix** - In either `openinference-instrumentation-google-adk` or `ag-ui-adk`
+3. **Use alternative observability** - A solution that doesn't conflict with AG-UI
+
+### If You Want to Try Anyway
+
+The code is in place for Budget, Weather, and Restaurant agents. Add to `.env`:
+
+```bash
+LANGFUSE_PUBLIC_KEY=your_public_key
+LANGFUSE_SECRET_KEY=your_secret_key
+LANGFUSE_BASE_URL=https://cloud.langfuse.com
+```
+
 ## Troubleshooting
 
 **Agents not connecting?**
@@ -200,6 +223,7 @@ Activate the virtual environment: `cd agents && source .venv/bin/activate`
 - [Google ADK](https://google.github.io/adk-docs/)
 - [LangGraph](https://langchain-ai.github.io/langgraph/)
 - [CopilotKit](https://docs.copilotkit.ai)
+- [Langfuse](https://langfuse.com/docs)
 
 ## License
 

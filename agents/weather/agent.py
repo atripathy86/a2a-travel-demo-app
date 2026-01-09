@@ -21,12 +21,34 @@ Key Components:
 import uvicorn
 import os
 import json
+import base64
 from typing import List
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 # Load environment variables from .env file (especially API keys)
 load_dotenv()
+
+
+# === LANGFUSE OBSERVABILITY (Optional) ===
+def _init_langfuse():
+    """Initialize Langfuse tracing if credentials are configured."""
+    public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
+    secret_key = os.getenv("LANGFUSE_SECRET_KEY")
+    if not (public_key and secret_key):
+        return
+    host = os.getenv("LANGFUSE_BASE_URL", "https://cloud.langfuse.com")
+    auth = base64.b64encode(f"{public_key}:{secret_key}".encode()).decode()
+    os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", f"{host}/api/public/otel")
+    os.environ.setdefault("OTEL_EXPORTER_OTLP_HEADERS", f"Authorization=Basic {auth}")
+    try:
+        from openinference.instrumentation.google_adk import GoogleADKInstrumentor
+        GoogleADKInstrumentor().instrument()
+    except Exception:
+        pass
+
+_init_langfuse()
+
 
 # Import A2A Protocol components for inter-agent communication
 from a2a.server.apps import A2AStarletteApplication

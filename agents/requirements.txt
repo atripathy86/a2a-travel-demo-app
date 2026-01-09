@@ -62,3 +62,12 @@ python-dotenv>=1.0.0
 # openai: OpenAI Python SDK for GPT models
 # Used by LangGraph agents (Itinerary Agent)
 openai>=1.0.0
+
+# ============================================================================
+# Observability (Optional - CURRENTLY BROKEN)
+# ============================================================================
+# WARNING: These packages cause conflicts with ag-ui-adk. See README for details.
+# langfuse: LLM observability and tracing platform
+# openinference-instrumentation-google-adk: OpenTelemetry instrumentation for ADK
+langfuse>=2.0.0
+openinference-instrumentation-google-adk>=0.1.0
