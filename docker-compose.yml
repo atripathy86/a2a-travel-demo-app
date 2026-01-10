@@ -34,10 +34,15 @@ services:
       - BUDGET_AGENT_URL=http://budget:9002
       - RESTAURANT_AGENT_URL=http://restaurant:9003
       - WEATHER_AGENT_URL=http://weather:9005
-      # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
       - LOG_LEVEL=warning 
     ports:
       - "9000:9000"
+    volumes:
+      - ./.env.orchestrator.models.json:/app/.env.orchestrator.models.json:ro
+      - ./.env.itinerary.models.json:/app/.env.itinerary.models.json:ro
+      - ./.env.budget.models.json:/app/.env.budget.models.json:ro
+      - ./.env.restaurant.models.json:/app/.env.restaurant.models.json:ro
+      - ./.env.weather.models.json:/app/.env.weather.models.json:ro
     networks:
       - a2a-network
     healthcheck:
@@ -57,10 +62,11 @@ services:
       - API_KEY=${API_KEY}
       - ITINERARY_PORT=9001
       - AGENT_URL=http://itinerary:9001/
-      # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
       - LOG_LEVEL=warning 
     ports:
       - "9001:9001"
+    volumes:
+      - ./.env.itinerary.models.json:/app/.env.itinerary.models.json:ro
     networks:
       - a2a-network
     healthcheck:
@@ -80,10 +86,11 @@ services:
       - API_KEY=${API_KEY}
       - BUDGET_PORT=9002
       - AGENT_URL=http://budget:9002/
-      # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
       - LOG_LEVEL=warning 
     ports:
       - "9002:9002"
+    volumes:
+      - ./.env.budget.models.json:/app/.env.budget.models.json:ro
     networks:
       - a2a-network
     healthcheck:
@@ -103,10 +110,11 @@ services:
       - API_KEY=${API_KEY}
       - RESTAURANT_PORT=9003
       - AGENT_URL=http://restaurant:9003/
-      # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
       - LOG_LEVEL=warning 
     ports:
       - "9003:9003"
+    volumes:
+      - ./.env.restaurant.models.json:/app/.env.restaurant.models.json:ro
     networks:
       - a2a-network
     healthcheck:
@@ -126,10 +134,11 @@ services:
       - API_KEY=${API_KEY}
       - WEATHER_PORT=9005
       - AGENT_URL=http://weather:9005/
-      # LOG_LEVEL options: debug (verbose), info (standard), warning (quiet), error (silent)
       - LOG_LEVEL=warning 
     ports:
       - "9005:9005"
+    volumes:
+      - ./.env.weather.models.json:/app/.env.weather.models.json:ro
     networks:
       - a2a-network
     healthcheck:

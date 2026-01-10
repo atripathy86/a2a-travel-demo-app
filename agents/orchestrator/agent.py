@@ -176,9 +176,26 @@ adk_orchestrator_agent = ADKAgent(
 
 app = FastAPI(title="Travel Planning Orchestrator (ADK)")
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Add the ADK agent endpoint to the FastAPI application
 # This creates the necessary routes for AG-UI Protocol communication
 add_adk_fastapi_endpoint(app, adk_orchestrator_agent, path="/")
+
+# Add model management routes
+from model_routes import create_model_routes
+
+agent_names = ["orchestrator", "itinerary", "budget", "restaurant", "weather"]
+model_routes = create_model_routes(agent_names)
+app.include_router(model_routes)
 
 # === MAIN APPLICATION ENTRY POINT ===
 if __name__ == "__main__":

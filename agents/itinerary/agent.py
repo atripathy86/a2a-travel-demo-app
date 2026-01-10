@@ -15,10 +15,16 @@ Key Components:
 import uvicorn
 import json
 import os
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables from .env file (especially OPENAI_API_KEY)
 load_dotenv()
+
+# Import model configuration management (from parent directory)
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from model_config import get_model_for_agent
 
 # Import A2A Protocol components for inter-agent communication
 from a2a.server.apps import A2AStarletteApplication
@@ -138,44 +144,38 @@ class ItineraryAgent:
 
     def __init__(self):
         """Initialize the agent with OpenAI LLM and build the workflow graph"""
-        # === LiteLLM Configuration (Multi-Model Support) ===
-        # Uses MODEL, API_BASE, API_KEY environment variables for flexible model selection
-        model = os.getenv("MODEL")
-        api_key = os.getenv("API_KEY")
-        api_base = os.getenv("API_BASE")
-        openai_api_key = os.getenv("OPENAI_API_KEY")
-
-        if model and api_key:
-            # Strip "hosted_vllm/" prefix for OpenAI-compatible endpoints
-            # The prefix is used by ADK agents but OpenAI client expects bare model name
-            if model.startswith("hosted_vllm/"):
-                model = model.replace("hosted_vllm/", "")
-
-            # Use LiteLLM with custom model configuration
-            # o4-mini and o-series models only support temperature=1
-            temperature = 1.0 if "o4-mini" in model or model.startswith("o") else 0.7
-            llm_kwargs = {
-                "model": model,
-                "api_key": api_key,
-                "temperature": temperature,
-            }
-            if api_base:
-                llm_kwargs["base_url"] = api_base
-            self.llm = ChatOpenAI(**llm_kwargs)
-        elif openai_api_key:
-            self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
-        else:
-            raise ValueError(
-                "No model configuration found. Set MODEL + API_KEY (+ optional API_BASE) "
-                "for LiteLLM, or OPENAI_API_KEY for OpenAI."
-            )
-            # # Fallback: Original OpenAI configuration
-            # # Initialize OpenAI client with GPT-4o-mini for cost efficiency
-            # # Temperature 0.7 provides creative but still focused responses
-            # self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
-
-        # Build and compile the LangGraph workflow
+        self.llm = self._get_model()
         self.graph = self._build_graph()
+
+    def _get_model(self) -> ChatOpenAI:
+        """Get model configuration from model_config module for runtime selection."""
+        model_config = get_model_for_agent("itinerary")
+
+        if not model_config:
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+            if openai_api_key:
+                return ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
+            raise ValueError(
+                "No model configuration found for itinerary agent. "
+                "Check .env.itinerary.models.json file or set OPENAI_API_KEY."
+            )
+
+        model_name = model_config.model
+        if model_name.startswith("hosted_vllm/"):
+            model_name = model_name.replace("hosted_vllm/", "")
+
+        temperature = (
+            1.0 if "o4-mini" in model_name or model_name.startswith("o") else 0.7
+        )
+        llm_kwargs = {
+            "model": model_name,
+            "api_key": model_config.api_key,
+            "temperature": temperature,
+        }
+        if model_config.api_base:
+            llm_kwargs["base_url"] = model_config.api_base
+
+        return ChatOpenAI(**llm_kwargs)
 
     def _build_graph(self):
         """

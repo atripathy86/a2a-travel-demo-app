@@ -74,6 +74,97 @@ Once running, the following services are available:
 | Restaurant Agent | http://localhost:9003 | Recommends restaurants |
 | Weather Agent | http://localhost:9005 | Provides weather forecasts |
 
+## Runtime Model Selection
+
+The application supports runtime model selection, allowing you to switch LLM models for each agent without restarting services.
+
+### UI Model Selector
+
+A Model Selector panel is available in the right sidebar of the main UI. It allows you to:
+- View the currently selected model for each agent
+- Switch models from a dropdown of available presets
+- Changes take effect immediately on the next request
+
+### Model Configuration Files
+
+Each agent reads its model configuration from a JSON file:
+
+| Agent | Config File |
+|-------|-------------|
+| Orchestrator | `.env.orchestrator.models.json` |
+| Itinerary | `.env.itinerary.models.json` |
+| Budget | `.env.budget.models.json` |
+| Restaurant | `.env.restaurant.models.json` |
+| Weather | `.env.weather.models.json` |
+
+**Setup:**
+
+1. Copy the example template for each agent:
+```bash
+cp .env.models.json.example .env.orchestrator.models.json
+cp .env.models.json.example .env.itinerary.models.json
+cp .env.models.json.example .env.budget.models.json
+cp .env.models.json.example .env.restaurant.models.json
+cp .env.models.json.example .env.weather.models.json
+```
+
+2. Edit each file to add your LLM endpoints and API keys.
+
+### Configuration File Format
+
+```json
+{
+  "models": [
+    {
+      "name": "Model Display Name",
+      "id": "unique-model-id",
+      "model": "provider/model-name",
+      "api_base": "http://your-llm-endpoint:port",
+      "api_key": "${API_KEY}",
+      "description": "Optional description",
+      "_disabled": false
+    }
+  ]
+}
+```
+
+- `name`: Display name shown in the UI dropdown
+- `id`: Unique identifier for the model (used in API calls)
+- `model`: Model identifier for LiteLLM (e.g., `gpt-4o`, `claude-3-sonnet`, `hosted_vllm/model-name`)
+- `api_base`: LLM API endpoint URL
+- `api_key`: API key (supports `${ENV_VAR}` substitution from `.env`)
+- `description`: Optional description shown in UI
+- `_disabled`: Set to `true` to hide model from selection (useful for incompatible models)
+
+**Note:** The last non-disabled model in the list is used as the default.
+
+### Model Management API
+
+The orchestrator exposes REST endpoints for model management:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/models/current/{agent}` | GET | Get current model for an agent |
+| `/api/models/available/{agent}` | GET | List available models for an agent |
+| `/api/models/set` | POST | Set model for an agent |
+| `/api/models/all-current` | GET | Get current models for all agents |
+
+Example: Set model for budget agent
+```bash
+curl -X POST http://localhost:9000/api/models/set \
+  -H "Content-Type: application/json" \
+  -d '{"agent": "budget", "model_id": "gpt-4o"}'
+```
+
+### Docker Compose Integration
+
+Model configuration files are mounted as volumes in `docker-compose.yml`, allowing you to modify them without rebuilding containers:
+
+```yaml
+volumes:
+  - ./.env.orchestrator.models.json:/app/.env.orchestrator.models.json:ro
+```
+
 ## Usage
 
 Try asking: "Plan a 3-day trip to Tokyo" or "I want to visit New York for 5 days"
@@ -143,15 +234,20 @@ a2a-travel-demo-app/
 ├── ui/                               # Next.js frontend
 │   ├── app/
 │   │   ├── api/copilotkit/route.ts   # A2A middleware setup
-│   │   └── page.tsx                  # Main UI
+│   │   └── page.tsx                  # Main UI with Model Selector
 │   ├── components/
 │   │   ├── a2a/                      # A2A message components
+│   │   ├── ModelSelector.tsx         # Runtime model selection UI
 │   │   ├── travel-chat.tsx           # Chat orchestration
 │   │   └── [other UI components]
+│   ├── lib/hooks/
+│   │   └── useModelConfig.ts         # Model config React hook
 │   ├── package.json
 │   └── Dockerfile
 │
 ├── agents/                           # Python agents
+│   ├── model_config.py               # Shared model configuration manager
+│   ├── model_routes.py               # FastAPI routes for model management
 │   ├── orchestrator/                 # ADK + AG-UI (9000)
 │   │   ├── agent.py
 │   │   └── __init__.py
@@ -170,8 +266,15 @@ a2a-travel-demo-app/
 │   ├── requirements.txt
 │   └── Dockerfile
 │
+├── .env.models.json.example          # Template for model configuration
+├── .env.orchestrator.models.json     # Orchestrator model presets
+├── .env.itinerary.models.json        # Itinerary agent model presets
+├── .env.budget.models.json           # Budget agent model presets
+├── .env.restaurant.models.json       # Restaurant agent model presets
+├── .env.weather.models.json          # Weather agent model presets
 ├── docker-compose.yml
 ├── package.json
+├── CHANGELOG.md                      # Version history and changes
 └── .env.example
 ```
 

@@ -52,6 +52,7 @@ export default function Home() {
       </div>
 
       <div className="flex flex-1 overflow-hidden gap-2">
+        {/* Main content area */}
         <div className="flex-1 overflow-y-auto rounded-lg bg-white/30 backdrop-blur-sm">
           <div className="max-w-5xl mx-auto p-8">
             <div className="mb-8">
@@ -101,6 +102,7 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Sidebar with Model Selector */}
         <div className="w-[350px] flex-shrink-0">
           <ModelSelector />
         </div>

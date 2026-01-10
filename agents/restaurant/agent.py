@@ -19,13 +19,19 @@ Key Components:
 # Import necessary libraries for web server, JSON handling, and environment variables
 import uvicorn
 import os
+import sys
 import json
+from pathlib import Path
 from typing import List
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 # Load environment variables from .env file (especially API keys)
 load_dotenv()
+
+# Import model configuration management (from parent directory)
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from model_config import get_model_for_agent
 
 # Import A2A Protocol components for inter-agent communication
 from a2a.server.apps import A2AStarletteApplication
@@ -146,26 +152,7 @@ class RestaurantAgent:
         Returns:
             Configured LlmAgent instance ready for restaurant recommendations
         """
-        # === LiteLLM Configuration (Multi-Model Support) ===
-        litellm_model = os.getenv("MODEL")
-        litellm_api_key = os.getenv("API_KEY")
-        litellm_api_base = os.getenv("API_BASE")
-        google_api_key = os.getenv("GOOGLE_API_KEY")
-
-        if litellm_model and litellm_api_key:
-            kwargs = {"model": litellm_model, "api_key": litellm_api_key}
-            if litellm_api_base:
-                kwargs["api_base"] = litellm_api_base
-            model = LiteLlm(**kwargs)
-        elif google_api_key:
-            model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-        else:
-            raise ValueError(
-                "No model configuration found. Set MODEL + API_KEY (+ optional API_BASE) "
-                "for LiteLLM, or GOOGLE_API_KEY for Gemini."
-            )
-            # # Fallback: Original Gemini model
-            # model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        model = self._get_model()
 
         return LlmAgent(
             model=model,
@@ -210,8 +197,27 @@ IMPORTANT RULES:
 
 Return ONLY valid JSON, no markdown code blocks, no other text.
             """,
-            tools=[],  # No additional tools needed for this agent
+            tools=[],
         )
+
+    def _get_model(self):
+        """Get model configuration from model_config module for runtime selection."""
+        model_config = get_model_for_agent("restaurant")
+
+        if not model_config:
+            google_api_key = os.getenv("GOOGLE_API_KEY")
+            if google_api_key:
+                return os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+            raise ValueError(
+                "No model configuration found for restaurant agent. "
+                "Check .env.restaurant.models.json file or set GOOGLE_API_KEY."
+            )
+
+        kwargs = {"model": model_config.model, "api_key": model_config.api_key}
+        if model_config.api_base:
+            kwargs["api_base"] = model_config.api_base
+
+        return LiteLlm(**kwargs)
 
     async def invoke(self, query: str, session_id: str) -> str:
         """
