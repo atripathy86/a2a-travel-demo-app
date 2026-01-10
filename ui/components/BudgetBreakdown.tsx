@@ -26,7 +26,7 @@ interface BudgetBreakdownProps {
 }
 
 export const BudgetBreakdown: React.FC<BudgetBreakdownProps> = ({ data }) => {
-  if (!data?.breakdown || !Array.isArray(data.breakdown)) {
+  if (!data?.breakdown || !Array.isArray(data.breakdown) || !data.totalBudget || !data.currency) {
     return null;
   }
 

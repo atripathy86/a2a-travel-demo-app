@@ -52,6 +52,10 @@ interface ItineraryCardProps {
 }
 
 export const ItineraryCard: React.FC<ItineraryCardProps> = ({ data, restaurantData }) => {
+  if (!data?.itinerary || !Array.isArray(data.itinerary)) {
+    return null;
+  }
+
   // Get meals for a specific day from restaurant data
   const getMealsForDay = (dayNumber: number): Meals | null => {
     if (!restaurantData) return null;
@@ -214,7 +218,7 @@ const TimeSlotSection: React.FC<TimeSlotSectionProps> = ({
         <span className="text-xs text-[#838389]">• {location}</span>
       </div>
       <ul className="space-y-0.5 ml-5">
-        {activities.map((activity, idx) => (
+        {activities?.map((activity, idx) => (
           <li key={idx} className="text-xs text-[#57575B] flex items-start">
             <span className="text-[#838389] mr-1">•</span>
             <span>{activity}</span>

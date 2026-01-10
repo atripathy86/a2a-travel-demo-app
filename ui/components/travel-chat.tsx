@@ -108,31 +108,34 @@ const ChatInner = ({
               parsed = result;
             }
 
-            // Step 4: Identify data type and trigger appropriate UI updates
-            if (parsed) {
-              // Itinerary data: destination + itinerary array
-              if (
-                parsed.destination &&
-                parsed.itinerary &&
-                Array.isArray(parsed.itinerary)
-              ) {
-                onItineraryUpdate?.(parsed as ItineraryData);
-              }
-              // Budget data: requires user approval before displaying
-              else if (
-                parsed.totalBudget &&
-                parsed.breakdown &&
-                Array.isArray(parsed.breakdown)
-              ) {
-                const budgetKey = `budget-${parsed.totalBudget}`;
-                const isApproved = approvalStates[budgetKey]?.approved || false;
-                // Step 5: Apply HITL approval check - only show if user approved
-                if (isApproved) {
-                  onBudgetUpdate?.(parsed as BudgetData);
-                }
-              }
-              // Weather data: destination + forecast array
-              else if (
+             // Step 4: Identify data type and trigger appropriate UI updates
+             if (parsed) {
+               console.log("Parsed agent response:", parsed);
+               // Budget data: requires user approval before displaying
+               // Check this first since it has specific fields (totalBudget, breakdown)
+               if (
+                 parsed.totalBudget &&
+                 parsed.breakdown &&
+                 Array.isArray(parsed.breakdown)
+               ) {
+                 console.log("Identified as budget data:", parsed);
+                 const budgetKey = `budget-${parsed.totalBudget}`;
+                 const isApproved = approvalStates[budgetKey]?.approved || false;
+                 // Step 5: Apply HITL approval check - only show if user approved
+                 if (isApproved) {
+                   onBudgetUpdate?.(parsed as BudgetData);
+                 }
+               }
+               // Itinerary data: destination + itinerary array
+               else if (
+                 parsed.destination &&
+                 parsed.itinerary &&
+                 Array.isArray(parsed.itinerary)
+               ) {
+                 onItineraryUpdate?.(parsed as ItineraryData);
+               }
+               // Weather data: destination + forecast array
+               else if (
                 parsed.destination &&
                 parsed.forecast &&
                 Array.isArray(parsed.forecast)

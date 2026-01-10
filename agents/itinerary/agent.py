@@ -146,8 +146,19 @@ class ItineraryAgent:
         openai_api_key = os.getenv("OPENAI_API_KEY")
 
         if model and api_key:
+            # Strip "hosted_vllm/" prefix for OpenAI-compatible endpoints
+            # The prefix is used by ADK agents but OpenAI client expects bare model name
+            if model.startswith("hosted_vllm/"):
+                model = model.replace("hosted_vllm/", "")
+
             # Use LiteLLM with custom model configuration
-            llm_kwargs = {"model": model, "api_key": api_key, "temperature": 0.7}
+            # o4-mini and o-series models only support temperature=1
+            temperature = 1.0 if "o4-mini" in model or model.startswith("o") else 0.7
+            llm_kwargs = {
+                "model": model,
+                "api_key": api_key,
+                "temperature": temperature,
+            }
             if api_base:
                 llm_kwargs["base_url"] = api_base
             self.llm = ChatOpenAI(**llm_kwargs)

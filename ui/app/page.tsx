@@ -81,21 +81,21 @@ export default function Home() {
             </div>
           )}
 
-          {(weatherData || budgetData) && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {weatherData && (
-                <div>
-                  <WeatherCard data={weatherData} />
-                </div>
-              )}
+           {(weatherData || budgetData) && (
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+               {weatherData && (
+                 <div>
+                   <WeatherCard data={weatherData} />
+                 </div>
+               )}
 
-              {budgetData && (
-                <div>
-                  <BudgetBreakdown data={budgetData} />
-                </div>
-              )}
-            </div>
-          )}
+               {budgetData && budgetData.breakdown && (
+                 <div>
+                   <BudgetBreakdown data={budgetData} />
+                 </div>
+               )}
+             </div>
+           )}
         </div>
       </div>
       </div>

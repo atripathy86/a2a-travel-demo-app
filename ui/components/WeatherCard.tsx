@@ -57,6 +57,10 @@ const getConditionStyle = (condition: string) => {
 };
 
 export const WeatherCard: React.FC<WeatherCardProps> = ({ data }) => {
+  if (!data?.forecast || !Array.isArray(data.forecast)) {
+    return null;
+  }
+
   return (
     <div className="bg-white/60 backdrop-blur-md rounded-xl p-4 my-3 border-2 border-[#DBDBE5] shadow-elevation-md animate-fade-in-up">
       {/* Header */}
@@ -68,10 +72,10 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({ data }) => {
         <p className="text-[#57575B] text-xs">{data.forecast.length}-day forecast</p>
       </div>
 
-      {/* Forecast Days */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-3">
-        {data.forecast.map((day, index) => {
-          const isBestDay = data.bestDays.includes(day.day);
+       {/* Forecast Days */}
+       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-3">
+         {data.forecast?.map((day, index) => {
+           const isBestDay = data.bestDays?.includes(day.day);
           return (
             <div
               key={index}

@@ -388,6 +388,9 @@ class BudgetAgentExecutor(AgentExecutor):
         """
         # Extract user query from the request context
         query = context.get_user_input()
+        # Ensure query is a string
+        if not isinstance(query, str):
+            query = str(query)
 
         # Get session ID for conversation continuity (fallback to default)
         session_id = getattr(context, "context_id", "default_session")
