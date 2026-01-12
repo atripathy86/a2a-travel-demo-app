@@ -12,6 +12,7 @@ Key Components:
 - AG-UI Protocol for frontend communication
 - A2A Protocol for inter-agent communication via middleware
 - FastAPI web server for HTTP endpoints
+- Runtime model switching via before_model_callback
 - Centralized orchestration logic for travel planning workflow
 
 Architecture:
@@ -21,65 +22,90 @@ Architecture:
 - Provides human-in-the-loop interactions for critical decisions
 """
 
-# Enable future annotations for forward compatibility
 from __future__ import annotations
 
-# Load environment variables from .env file before other imports
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Import necessary libraries for web server and environment variables
 import os
+import sys
 import uvicorn
 import warnings
+from pathlib import Path
+from typing import Optional
 
-# Filter out "Unclosed connection" warnings from aiohttp/httpx which are common in some async contexts
 warnings.filterwarnings("ignore", message="Unclosed connection")
 
-# Import FastAPI for creating HTTP endpoints
 from fastapi import FastAPI
 
-# Import AG-UI ADK components for frontend integration
 from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
 
-# Import Google ADK components for LLM agent creation
 from google.adk.agents import LlmAgent
-from google.adk.models.lite_llm import LiteLlm  # For multi-model support
+from google.adk.agents.callback_context import CallbackContext
+from google.adk.models.llm_request import LlmRequest
+from google.adk.models.llm_response import LlmResponse
+from google.adk.models.lite_llm import LiteLlm
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from model_config import get_model_for_agent
 
 
-# === ORCHESTRATOR AGENT CONFIGURATION ===
-# Create the main orchestrator agent using Google ADK's LlmAgent
-# This agent coordinates all travel planning activities and manages the workflow
+def _get_initial_model():
+    """Get initial model for agent creation - uses LiteLLM for flexibility."""
+    model_config = get_model_for_agent("orchestrator")
 
+    if model_config:
+        kwargs = {"model": model_config.model, "api_key": model_config.api_key}
+        if model_config.api_base:
+            kwargs["api_base"] = model_config.api_base
+        return LiteLlm(**kwargs)
 
-def _get_model():
-    """Get model configuration - LiteLLM if configured, otherwise Gemini"""
-    model_name = os.getenv("MODEL")
     api_key = os.getenv("API_KEY")
+    model_name = os.getenv("MODEL")
     api_base = os.getenv("API_BASE")
-    google_api_key = os.getenv("GOOGLE_API_KEY")
 
     if model_name and api_key:
         kwargs = {"model": model_name, "api_key": api_key}
         if api_base:
             kwargs["api_base"] = api_base
         return LiteLlm(**kwargs)
-    elif google_api_key:
+
+    google_api_key = os.getenv("GOOGLE_API_KEY")
+    if google_api_key:
         return "gemini-2.0-flash"
-    else:
-        raise ValueError(
-            "No model configuration found. Set MODEL + API_KEY (+ optional API_BASE) "
-            "for LiteLLM, or GOOGLE_API_KEY for Gemini."
+
+    raise ValueError(
+        "No model configuration found. Set MODEL + API_KEY (+ optional API_BASE) "
+        "for LiteLLM, or GOOGLE_API_KEY for Gemini."
+    )
+
+
+def before_model_callback(
+    callback_context: CallbackContext, llm_request: LlmRequest
+) -> Optional[LlmResponse]:
+    """
+    Runtime model switching callback - modifies LlmRequest before sending to LLM.
+
+    Per ADK recommendation (github.com/google/adk-python/issues/3647):
+    - Modify llm_request.model (string) instead of agent.model
+    - LiteLLM handles provider routing via model name prefixes
+    """
+    model_config = get_model_for_agent("orchestrator")
+
+    if model_config:
+        llm_request.model = model_config.model
+        print(
+            f"🎯 Orchestrator using model: {model_config.name} ({model_config.model})"
         )
-        # # Fallback: Original Gemini model
-        # # model="gemini-2.5-pro",  # Has function name wrapping issue (adds newlines to long tool names)
-        # return "gemini-2.0-flash"
+
+    return None
 
 
 orchestrator_agent = LlmAgent(
     name="OrchestratorAgent",
-    model=_get_model(),
+    model=_get_initial_model(),
+    before_model_callback=before_model_callback,
     instruction="""
     You are a travel planning orchestrator agent. Your role is to coordinate specialized agents
     to create personalized travel plans.
@@ -158,21 +184,13 @@ orchestrator_agent = LlmAgent(
     """,
 )
 
-# === AG-UI PROTOCOL INTEGRATION ===
-# Wrap the orchestrator agent with AG-UI Protocol capabilities
-# This enables frontend communication and provides the interface for user interactions
-
 adk_orchestrator_agent = ADKAgent(
-    adk_agent=orchestrator_agent,  # The core LLM agent we created above
-    app_name="orchestrator_app",  # Unique application identifier
-    user_id="demo_user",  # Default user ID for demo purposes
-    session_timeout_seconds=3600,  # Session timeout (1 hour)
-    use_in_memory_services=True,  # Use in-memory storage for simplicity
+    adk_agent=orchestrator_agent,
+    app_name="orchestrator_app",
+    user_id="demo_user",
+    session_timeout_seconds=3600,
+    use_in_memory_services=True,
 )
-
-# === FASTAPI WEB APPLICATION SETUP ===
-# Create the FastAPI application that will serve the orchestrator agent
-# This provides HTTP endpoints for the AG-UI Protocol communication
 
 app = FastAPI(title="Travel Planning Orchestrator (ADK)")
 
@@ -186,48 +204,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add the ADK agent endpoint to the FastAPI application
-# This creates the necessary routes for AG-UI Protocol communication
 add_adk_fastapi_endpoint(app, adk_orchestrator_agent, path="/")
 
-# Add model management routes
 from model_routes import create_model_routes
 
 agent_names = ["orchestrator", "itinerary", "budget", "restaurant", "weather"]
 model_routes = create_model_routes(agent_names)
 app.include_router(model_routes)
 
-# === MAIN APPLICATION ENTRY POINT ===
 if __name__ == "__main__":
-    """
-    Main entry point when the script is run directly.
-    
-    This function:
-    1. Checks for required environment variables (API keys)
-    2. Configures the server port
-    3. Starts the uvicorn server with the FastAPI application
-    """
-
-    # Check for required API key (LiteLLM or Google)
     if not os.getenv("API_KEY") and not os.getenv("GOOGLE_API_KEY"):
-        print("⚠️  Warning: No API key found!")
+        print("Warning: No API key found!")
         print("   Set API_KEY (for LiteLLM) or GOOGLE_API_KEY environment variable")
         print("   For LiteLLM, also set MODEL and optionally API_BASE")
         print()
 
-    # Get server port from environment variable, default to 9000
     port = int(os.getenv("ORCHESTRATOR_PORT", 9000))
 
-    # Start the server with detailed information
-    print(f"🚀 Starting Orchestrator Agent (ADK + AG-UI) on http://localhost:{port}")
+    print(f"Starting Orchestrator Agent (ADK + AG-UI) on http://localhost:{port}")
 
-    # Run the FastAPI application using uvicorn
-    # host="0.0.0.0" allows external connections
-    # port is configurable via environment variable
-    # log_level is configurable via LOG_LEVEL environment variable (default: info)
-    # - debug: Shows all messages including detailed request/response traces (too verbose for production)
-    # - info: Shows startup messages and access logs (e.g., "GET / HTTP/1.1 200 OK")
-    # - warning: Suppresses access logs, shows only potential issues and errors (cleaner output)
-    # - error: Shows only serious errors
     log_level = os.getenv("LOG_LEVEL", "info").lower()
     uvicorn.run(app, host="0.0.0.0", port=port, log_level=log_level)

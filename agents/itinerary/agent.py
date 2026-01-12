@@ -25,6 +25,7 @@ load_dotenv()
 # Import model configuration management (from parent directory)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from model_config import get_model_for_agent
+from model_routes_starlette import create_starlette_model_routes
 
 # Import A2A Protocol components for inter-agent communication
 from a2a.server.apps import A2AStarletteApplication
@@ -143,14 +144,33 @@ class ItineraryAgent:
     """
 
     def __init__(self):
-        """Initialize the agent with OpenAI LLM and build the workflow graph"""
-        self.llm = self._get_model()
+        """Initialize the agent and build the workflow graph"""
+        self._current_model_id: Optional[str] = None
+        self._llm: Optional[ChatOpenAI] = None
         self.graph = self._build_graph()
 
-    def _get_model(self) -> ChatOpenAI:
-        """Get model configuration from model_config module for runtime selection."""
+    @property
+    def llm(self) -> ChatOpenAI:
+        """Get LLM instance, recreating if model config changed."""
         model_config = get_model_for_agent("itinerary")
+        current_id = model_config.id if model_config else None
 
+        if self._llm is None or current_id != self._current_model_id:
+            self._llm = self._create_llm(model_config)
+            self._current_model_id = current_id
+            if model_config:
+                print(
+                    f"📅 Itinerary model changed to: {model_config.name} ({model_config.model})"
+                )
+
+        if model_config:
+            print(
+                f"📅 Itinerary using model: {model_config.name} ({model_config.model})"
+            )
+
+        return self._llm
+
+    def _create_llm(self, model_config) -> ChatOpenAI:
         if not model_config:
             openai_api_key = os.getenv("OPENAI_API_KEY")
             if openai_api_key:
@@ -494,6 +514,16 @@ def main():
         extended_agent_card=public_agent_card,  # Extended agent info (same as public)
     )
 
+    # Build the Starlette app and add model routes
+    app = server.build()
+
+    # Add model configuration routes for runtime model switching
+    model_routes = create_starlette_model_routes("itinerary")
+    app.routes.extend(model_routes)
+    print(
+        "📡 Model routes added: /api/models/current, /api/models/available, /api/models/set"
+    )
+
     # Start the server
     print(f"🗺️  Starting Itinerary Agent (LangGraph + A2A) on http://localhost:{port}")
 
@@ -503,7 +533,7 @@ def main():
     # - warning: Suppresses access logs, shows only potential issues and errors (cleaner output)
     # - error: Shows only serious errors
     log_level = os.getenv("LOG_LEVEL", "info").lower()
-    uvicorn.run(server.build(), host="0.0.0.0", port=port, log_level=log_level)
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level=log_level)
 
 
 # === ENTRY POINT ===

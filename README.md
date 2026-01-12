@@ -140,13 +140,23 @@ cp .env.models.json.example .env.weather.models.json
 
 ### Model Management API
 
-The orchestrator exposes REST endpoints for model management:
+The orchestrator exposes REST endpoints for model management. Since each agent runs in its own Docker container with separate processes, the orchestrator **proxies** model change requests to individual agents:
+
+```
+UI → POST /api/models/set {agent: "itinerary", model_id: "gpt-4o"}
+    ↓
+Orchestrator (port 9000)
+    ├── agent == "orchestrator" → update local config
+    └── agent != "orchestrator" → proxy to agent's /api/models/set
+            ↓
+        Target Agent ← receives {model_id: "gpt-4o"}
+```
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/models/current/{agent}` | GET | Get current model for an agent |
 | `/api/models/available/{agent}` | GET | List available models for an agent |
-| `/api/models/set` | POST | Set model for an agent |
+| `/api/models/set` | POST | Set model for an agent (proxied to target agent) |
 | `/api/models/all-current` | GET | Get current models for all agents |
 
 Example: Set model for budget agent
@@ -154,6 +164,12 @@ Example: Set model for budget agent
 curl -X POST http://localhost:9000/api/models/set \
   -H "Content-Type: application/json" \
   -d '{"agent": "budget", "model_id": "gpt-4o"}'
+```
+
+Individual agents also expose their own model endpoints (used by the orchestrator proxy):
+```bash
+# Direct access to agent's model endpoint
+curl http://localhost:9002/api/models/current
 ```
 
 ### Docker Compose Integration
@@ -247,7 +263,8 @@ a2a-travel-demo-app/
 │
 ├── agents/                           # Python agents
 │   ├── model_config.py               # Shared model configuration manager
-│   ├── model_routes.py               # FastAPI routes for model management
+│   ├── model_routes.py               # FastAPI routes for orchestrator (with proxy logic)
+│   ├── model_routes_starlette.py     # Starlette routes for A2A agents
 │   ├── orchestrator/                 # ADK + AG-UI (9000)
 │   │   ├── agent.py
 │   │   └── __init__.py
@@ -275,6 +292,8 @@ a2a-travel-demo-app/
 ├── docker-compose.yml
 ├── package.json
 ├── CHANGELOG.md                      # Version history and changes
+├── Model-Hot-Reload.md               # Detailed model switching documentation
+├── Model-Host-Reload.md              # Implementation summary for multi-process model switching
 └── .env.example
 ```
 

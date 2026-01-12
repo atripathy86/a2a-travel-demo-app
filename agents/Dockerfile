@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY model_config.py ./
 COPY model_routes.py ./
+COPY model_routes_starlette.py ./
 COPY budget/ ./budget/
 COPY weather/ ./weather/
 COPY restaurant/ ./restaurant/

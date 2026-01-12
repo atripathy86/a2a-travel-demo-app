@@ -5,7 +5,11 @@
 .env.test.local
 .env.production.local
 .env.models.json
-.env.*.json
+.env.budget.models.json
+.env.itinerary.models.json
+.env.orchestrator.models.json
+.env.restaurant.models.json
+.env.weather.models.json
 .venv/
 
 # Python
@@ -96,6 +100,8 @@ Desktop.ini
 !.env.example
 *.md
 !README.md
+!Model-Hot-Reload.md
+!Model-Hot-Reload2.md
 examples/
 docs/
 .cursorrules

@@ -34,6 +34,7 @@ load_dotenv()
 # Import model configuration management (from parent directory)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from model_config import get_model_for_agent
+from model_routes_starlette import create_starlette_model_routes
 
 # Import A2A Protocol components for inter-agent communication
 from a2a.server.apps import A2AStarletteApplication
@@ -50,12 +51,16 @@ from a2a.utils import new_agent_text_message
 
 # Import Google ADK (Agent Development Kit) components for LLM integration
 from google.adk.agents.llm_agent import LlmAgent
+from google.adk.agents.callback_context import CallbackContext
+from google.adk.models.llm_request import LlmRequest
+from google.adk.models.llm_response import LlmResponse
 from google.adk.models.lite_llm import LiteLlm  # For multi-model support
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
 from google.adk.artifacts import InMemoryArtifactService
 from google.genai import types
+from typing import Optional
 
 
 def _extract_first_json(text: str) -> str:
@@ -90,6 +95,25 @@ def _extract_first_json(text: str) -> str:
 # === DATA MODELS ===
 # These Pydantic models define the structure of our budget estimation data
 # This ensures type safety and automatic validation of the generated content
+
+
+def _before_model_callback(
+    callback_context: CallbackContext, llm_request: LlmRequest
+) -> Optional[LlmResponse]:
+    """
+    Runtime model switching callback - modifies LlmRequest before sending to LLM.
+
+    Per ADK recommendation (github.com/google/adk-python/issues/3647):
+    - Modify llm_request.model (string) instead of agent.model
+    - LiteLLM handles provider routing via model name prefixes
+    """
+    model_config = get_model_for_agent("budget")
+
+    if model_config:
+        llm_request.model = model_config.model
+        print(f"💰 Budget using model: {model_config.name} ({model_config.model})")
+
+    return None
 
 
 class BudgetCategory(BaseModel):
@@ -158,6 +182,7 @@ class BudgetAgent:
             model=model,
             name="budget_agent",
             description="An agent that estimates travel costs and creates detailed budget breakdowns",
+            before_model_callback=_before_model_callback,
             instruction="""
 You are a travel budget planning agent. Your role is to estimate realistic travel budgets based on user requests.
 
@@ -458,9 +483,16 @@ def main():
     )
 
     # Start the server with detailed information
+    app = server.build()
+    model_routes = create_starlette_model_routes("budget")
+    app.routes.extend(model_routes)
+
     print(f"💰 Starting Budget Agent (ADK + A2A) on http://localhost:{port}")
     print(f"   Agent: {public_agent_card.name}")
     print(f"   Description: {public_agent_card.description}")
+    print(
+        "📡 Model routes added: /api/models/current, /api/models/available, /api/models/set"
+    )
 
     # log_level is configurable via LOG_LEVEL environment variable (default: info)
     # - debug: Shows all messages including detailed request/response traces (too verbose for production)
@@ -468,7 +500,7 @@ def main():
     # - warning: Suppresses access logs, shows only potential issues and errors (cleaner output)
     # - error: Shows only serious errors
     log_level = os.getenv("LOG_LEVEL", "info").lower()
-    uvicorn.run(server.build(), host="0.0.0.0", port=port, log_level=log_level)
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level=log_level)
 
 
 # === ENTRY POINT ===

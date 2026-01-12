@@ -34,7 +34,8 @@ services:
       - BUDGET_AGENT_URL=http://budget:9002
       - RESTAURANT_AGENT_URL=http://restaurant:9003
       - WEATHER_AGENT_URL=http://weather:9005
-      - LOG_LEVEL=warning 
+      - LOG_LEVEL=warning
+      - no_proxy=itinerary,budget,weather,restaurant,localhost,127.0.0.1
     ports:
       - "9000:9000"
     volumes:
